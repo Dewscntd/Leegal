@@ -1,0 +1,157 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: contract-analyzer
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: contract-analyzer
+    app.kubernetes.io/part-of: contract-analyzer
+  annotations:
+    # Enable sync options (combined)
+    argocd.argoproj.io/sync-options: Prune=true,SelfHeal=true,CreateNamespace=true
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  # Project configuration
+  project: default
+  
+  # Source repository configuration
+  source:
+    # GitHub repository URL
+    repoURL: https://github.com/Dewscntd/Leegal.git
+    # Track HEAD of main branch
+    targetRevision: HEAD
+    # Path to Helm chart
+    path: deploy/charts/contract-analyzer
+    
+    # Helm configuration
+    helm:
+      # Use values files
+      valueFiles:
+        - values.yaml
+      
+      # Override values for different environments
+      parameters:
+        - name: global.environment
+          value: production
+        - name: global.imageRegistry
+          value: ghcr.io/dewscntd/leegal
+  
+  # Destination cluster configuration  
+  destination:
+    # Target Kubernetes cluster
+    server: https://kubernetes.default.svc
+    # Target namespace
+    namespace: contract-analyzer
+  
+  # Sync policy configuration
+  syncPolicy:
+    # Enable automatic sync
+    automated:
+      # Automatically sync when changes detected
+      prune: true
+      # Enable self-healing
+      selfHeal: true
+      # Allow empty resources
+      allowEmpty: false
+    
+    # Sync options
+    syncOptions:
+      # Create namespace if it doesn't exist
+      - CreateNamespace=true
+      # Prune resources that are no longer defined
+      - Prune=true
+      # Apply out-of-sync resources immediately
+      - ApplyOutOfSyncOnly=true
+      # Respect ignore differences
+      - RespectIgnoreDifferences=true
+      # Server-side apply
+      - ServerSideApply=true
+    
+    # Retry configuration
+    retry:
+      # Number of retry attempts
+      limit: 5
+      backoff:
+        # Initial retry delay
+        duration: 5s
+        # Backoff factor
+        factor: 2
+        # Maximum retry delay
+        maxDuration: 3m
+  
+  # Ignore differences in certain fields
+  ignoreDifferences:
+    # Ignore differences in replica count (handled by HPA)
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    
+    # Ignore differences in resource requests/limits (handled by VPA)
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/spec/containers/0/resources
+
+---
+# ArgoCD Project for better organization
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: contract-analyzer-project
+  namespace: argocd
+spec:
+  description: ContractAnalyzer microservices project
+  
+  # Source repositories
+  sourceRepos:
+    - https://github.com/Dewscntd/Leegal.git
+    - https://github.com/Dewscntd/Leegal
+  
+  # Destination clusters and namespaces
+  destinations:
+    - namespace: contract-analyzer
+      server: https://kubernetes.default.svc
+    - namespace: contract-analyzer-*
+      server: https://kubernetes.default.svc
+  
+  # Allowed Kubernetes resources
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+  
+  # Namespace-scoped resources
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: '*'
+    - group: apps
+      kind: '*'
+    - group: networking.k8s.io
+      kind: '*'
+    - group: autoscaling
+      kind: '*'
+    - group: policy
+      kind: '*'
+  
+  # RBAC roles
+  roles:
+    - name: admin
+      description: Admin access to contract-analyzer project
+      policies:
+        - p, proj:contract-analyzer-project:admin, applications, *, contract-analyzer-project/*, allow
+        - p, proj:contract-analyzer-project:admin, repositories, *, *, allow
+      groups:
+        - contract-analyzer:admin
+    
+    - name: developer
+      description: Developer access to contract-analyzer project
+      policies:
+        - p, proj:contract-analyzer-project:developer, applications, get, contract-analyzer-project/*, allow
+        - p, proj:contract-analyzer-project:developer, applications, sync, contract-analyzer-project/*, allow
+      groups:
+        - contract-analyzer:developer

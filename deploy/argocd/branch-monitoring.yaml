@@ -1,0 +1,126 @@
+# ArgoCD ApplicationSet for monitoring auto-bump branches
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: contract-analyzer-auto-bump
+  namespace: argocd
+spec:
+  generators:
+    # Git generator to monitor branches matching pattern
+    - git:
+        repoURL: https://github.com/Dewscntd/Leegal.git
+        revision: HEAD
+        directories:
+          - path: deploy/charts/contract-analyzer
+        
+        # Template for branch selection
+        template:
+          metadata:
+            name: 'contract-analyzer-{{branch}}'
+          spec:
+            project: default
+            source:
+              repoURL: https://github.com/Dewscntd/Leegal.git
+              targetRevision: '{{branch}}'
+              path: deploy/charts/contract-analyzer
+            destination:
+              server: https://kubernetes.default.svc
+              namespace: contract-analyzer
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
+  
+  # Template for applications
+  template:
+    metadata:
+      name: 'contract-analyzer-{{branch-slug}}'
+      labels:
+        branch: '{{branch}}'
+        auto-bump: 'true'
+    spec:
+      project: default
+      
+      source:
+        repoURL: https://github.com/Dewscntd/Leegal.git
+        targetRevision: '{{branch}}'
+        path: deploy/charts/contract-analyzer
+        
+        helm:
+          valueFiles:
+            - values.yaml
+      
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: contract-analyzer
+      
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        
+        syncOptions:
+          - CreateNamespace=true
+          - Prune=true
+          - ApplyOutOfSyncOnly=true
+
+---
+# ArgoCD Notification Configuration for auto-bump branches
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+data:
+  # Slack notification template
+  template.app-sync-succeeded: |
+    message: |
+      🚀 **Auto-deployment successful!**
+      
+      **Application:** {{.app.metadata.name}}
+      **Branch:** {{.app.metadata.labels.branch}}
+      **Revision:** {{.app.status.sync.revision}}
+      **Environment:** {{.app.spec.destination.namespace}}
+      
+      **Services Updated:**
+      {{range .app.status.resources}}
+      - {{.kind}}/{{.name}}
+      {{end}}
+  
+  # Email notification template  
+  template.app-sync-failed: |
+    subject: "❌ ArgoCD Auto-deployment Failed: {{.app.metadata.name}}"
+    body: |
+      Auto-deployment failed for application {{.app.metadata.name}}.
+      
+      Branch: {{.app.metadata.labels.branch}}
+      Error: {{.app.status.conditions[0].message}}
+      
+      Please check the ArgoCD UI for more details.
+  
+  # Webhook configuration
+  service.webhook.github: |
+    url: https://api.github.com/repos/Dewscntd/Leegal/statuses/{{.app.status.sync.revision}}
+    headers:
+      - name: Authorization
+        value: token $github-token
+  
+  # Trigger configuration
+  trigger.on-sync-succeeded: |
+    - when: app.status.sync.status == 'Synced' and app.metadata.labels['auto-bump'] == 'true'
+      send: [app-sync-succeeded]
+  
+  trigger.on-sync-failed: |
+    - when: app.status.sync.status == 'Failed' and app.metadata.labels['auto-bump'] == 'true'
+      send: [app-sync-failed]
+
+---
+# Secret for GitHub token (for notifications)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-token
+  namespace: argocd
+type: Opaque
+stringData:
+  github-token: "your-github-personal-access-token"

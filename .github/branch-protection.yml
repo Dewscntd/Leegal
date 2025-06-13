@@ -1,0 +1,75 @@
+# Branch Protection Configuration
+# This file documents the required branch protection settings for the main branch
+# Apply these settings through GitHub UI or GitHub CLI
+
+main:
+  # Require status checks to pass before merging
+  required_status_checks:
+    # Require branches to be up to date before merging
+    strict: true
+    # Required status check contexts
+    contexts:
+      # Build Matrix Jobs - All services must pass lint and test
+      - "Build Matrix (api-gateway)"
+      - "Build Matrix (auth)"
+      - "Build Matrix (analysis)"
+      - "Build Matrix (citation)"
+      - "Build Matrix (ocr-wrapper)"
+      
+      # Security Scan Jobs - All services must pass security checks
+      - "Security Scan (api-gateway)"
+      - "Security Scan (auth)"
+      - "Security Scan (analysis)"
+      - "Security Scan (citation)"
+      - "Security Scan (ocr-wrapper)"
+      
+      # Overall PR status check
+      - "PR Status Check"
+
+  # Enforce restrictions for administrators
+  enforce_admins: true
+
+  # Require pull request reviews before merging
+  required_pull_request_reviews:
+    # Number of required approving reviews
+    required_approving_review_count: 1
+    # Dismiss stale reviews when new commits are pushed
+    dismiss_stale_reviews: true
+    # Require review from code owners
+    require_code_owner_reviews: true
+    # Restrict who can dismiss reviews
+    dismissal_restrictions:
+      users: []
+      teams: []
+
+  # Restrict pushes to matching branches
+  restrictions:
+    # Allow all users and teams to push (null = no restrictions)
+    users: []
+    teams: []
+    apps: []
+
+  # Require signed commits
+  required_signatures: false
+
+  # Allow force pushes
+  allow_force_pushes: false
+
+  # Allow deletions
+  allow_deletions: false
+
+# GitHub CLI commands to apply these settings:
+# 
+# gh api repos/:owner/:repo/branches/main/protection \
+#   --method PUT \
+#   --field required_status_checks='{"strict":true,"contexts":["Build Matrix (api-gateway)","Build Matrix (auth)","Build Matrix (analysis)","Build Matrix (citation)","Build Matrix (ocr-wrapper)","Security Scan (api-gateway)","Security Scan (auth)","Security Scan (analysis)","Security Scan (citation)","Security Scan (ocr-wrapper)","PR Status Check"]}' \
+#   --field enforce_admins=true \
+#   --field required_pull_request_reviews='{"required_approving_review_count":1,"dismiss_stale_reviews":true,"require_code_owner_reviews":true}' \
+#   --field restrictions=null \
+#   --field allow_force_pushes=false \
+#   --field allow_deletions=false
+
+# Alternative: Use GitHub's web interface
+# 1. Go to Settings > Branches
+# 2. Add rule for 'main' branch
+# 3. Configure the settings as specified above

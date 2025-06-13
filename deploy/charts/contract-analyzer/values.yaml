@@ -1,0 +1,222 @@
+# Global values for ContractAnalyzer umbrella chart
+global:
+  # Image registry configuration
+  imageRegistry: ""
+  imagePullSecrets: []
+  
+  # Common labels
+  commonLabels:
+    app.kubernetes.io/part-of: contract-analyzer
+    app.kubernetes.io/managed-by: helm
+  
+  # Environment configuration
+  environment: development
+  
+  # Database configuration
+  database:
+    host: postgres
+    port: 5432
+    name: contract_analyzer
+    username: postgres
+    # password should be set via secret
+  
+  # Redis configuration
+  redis:
+    host: redis
+    port: 6379
+  
+  # RabbitMQ configuration
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: guest
+    # password should be set via secret
+  
+  # Qdrant configuration
+  qdrant:
+    host: qdrant
+    port: 6333
+
+# Service-specific configurations
+api-gateway:
+  enabled: true
+  image:
+    repository: contract-analyzer/api-gateway
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 2
+  
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+  
+  env:
+    NODE_ENV: development
+    PORT: "3000"
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+auth:
+  enabled: true
+  image:
+    repository: contract-analyzer/auth
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 2
+  
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+  
+  env:
+    NODE_ENV: development
+    PORT: "3000"
+  
+  resources:
+    limits:
+      cpu: 300m
+      memory: 256Mi
+    requests:
+      cpu: 150m
+      memory: 128Mi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+analysis:
+  enabled: true
+  image:
+    repository: contract-analyzer/analysis
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 2
+  
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+  
+  env:
+    NODE_ENV: development
+    PORT: "3000"
+  
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    # KEDA scaling based on RabbitMQ queue length
+    keda:
+      enabled: true
+      triggers:
+        - type: rabbitmq
+          metadata:
+            queueName: analysis-queue
+            host: amqp://guest:guest@rabbitmq:5672
+            queueLength: "10"
+
+citation:
+  enabled: true
+  image:
+    repository: contract-analyzer/citation
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 2
+  
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+  
+  env:
+    NODE_ENV: development
+    PORT: "3000"
+  
+  resources:
+    limits:
+      cpu: 400m
+      memory: 512Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+ocr-wrapper:
+  enabled: true
+  image:
+    repository: contract-analyzer/ocr-wrapper
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  replicaCount: 2
+  
+  service:
+    type: ClusterIP
+    port: 3000
+    targetPort: 3000
+  
+  env:
+    NODE_ENV: development
+    PORT: "3000"
+  
+  resources:
+    limits:
+      cpu: 800m
+      memory: 1Gi
+    requests:
+      cpu: 400m
+      memory: 512Mi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 12
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    # KEDA scaling based on RabbitMQ queue length
+    keda:
+      enabled: true
+      triggers:
+        - type: rabbitmq
+          metadata:
+            queueName: ocr-queue
+            host: amqp://guest:guest@rabbitmq:5672
+            queueLength: "5"

@@ -1,0 +1,38 @@
+apiVersion: v2
+name: contract-analyzer
+description: ContractAnalyzer microservices umbrella Helm chart
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - contract-analyzer
+  - microservices
+  - legal-tech
+home: https://github.com/your-org/contract-analyzer
+sources:
+  - https://github.com/your-org/contract-analyzer
+maintainers:
+  - name: ContractAnalyzer Team
+    email: team@contract-analyzer.com
+
+dependencies:
+  - name: api-gateway
+    version: "0.1.0"
+    repository: "file://./charts/api-gateway"
+    condition: api-gateway.enabled
+  - name: auth
+    version: "0.1.0"
+    repository: "file://./charts/auth"
+    condition: auth.enabled
+  - name: analysis
+    version: "0.1.0"
+    repository: "file://./charts/analysis"
+    condition: analysis.enabled
+  - name: citation
+    version: "0.1.0"
+    repository: "file://./charts/citation"
+    condition: citation.enabled
+  - name: ocr-wrapper
+    version: "0.1.0"
+    repository: "file://./charts/ocr-wrapper"
+    condition: ocr-wrapper.enabled

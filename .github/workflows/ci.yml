@@ -1,0 +1,267 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  NODE_VERSION: '20'
+  COVERAGE_THRESHOLD: 70
+
+jobs:
+  # Matrix build for all microservices
+  build-matrix:
+    name: Build Matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [api-gateway, auth, analysis, citation, ocr-wrapper]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: 'contract-analyzer/pnpm-lock.yaml'
+
+      - name: Install dependencies
+        run: |
+          cd contract-analyzer
+          pnpm install --frozen-lockfile
+
+      - name: Run lint
+        run: |
+          cd contract-analyzer
+          pnpm nx lint ${{ matrix.service }}
+
+      - name: Run tests with coverage
+        run: |
+          cd contract-analyzer
+          pnpm nx test ${{ matrix.service }} --coverage --coverageThreshold='{"global":{"branches":${{ env.COVERAGE_THRESHOLD }},"functions":${{ env.COVERAGE_THRESHOLD }},"lines":${{ env.COVERAGE_THRESHOLD }},"statements":${{ env.COVERAGE_THRESHOLD }}}}'
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: contract-analyzer/coverage/lcov.info
+          flags: ${{ matrix.service }}
+          name: ${{ matrix.service }}-coverage
+          fail_ci_if_error: false
+
+  # Security scanning
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway, auth, analysis, citation, ocr-wrapper]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: 'contract-analyzer/pnpm-lock.yaml'
+
+      - name: Install dependencies
+        run: |
+          cd contract-analyzer
+          pnpm install --frozen-lockfile
+
+      - name: Run Snyk to check for Node.js vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --file=contract-analyzer/package.json
+
+  # Build and push Docker images
+  build-and-push:
+    name: Build and Push
+    runs-on: ubuntu-latest
+    needs: [build-matrix, security-scan]
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    strategy:
+      matrix:
+        service: [api-gateway, auth, analysis, citation, ocr-wrapper]
+    outputs:
+      image-tags: ${{ steps.meta.outputs.tags }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=${{ github.sha }}
+
+      - name: Determine Dockerfile path
+        id: dockerfile
+        run: |
+          if [ "${{ matrix.service }}" = "api-gateway" ]; then
+            echo "path=contract-analyzer/apps/Dockerfile" >> $GITHUB_OUTPUT
+          else
+            echo "path=contract-analyzer/apps/${{ matrix.service }}/Dockerfile" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ steps.dockerfile.outputs.path }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          build-args: |
+            SERVICE=${{ matrix.service }}
+
+      - name: Run Snyk to check Docker image for vulnerabilities
+        uses: snyk/actions/docker@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}:${{ github.sha }}
+          args: --severity-threshold=high
+
+  # Helm deployment automation
+  helm-deploy:
+    name: Helm Deploy
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    strategy:
+      matrix:
+        service: [api-gateway, auth, analysis, citation, ocr-wrapper]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup yq
+        uses: mikefarah/yq@master
+
+      - name: Update Helm chart image tag
+        run: |
+          # Update the image tag in the Helm values file
+          yq eval '.image.tag = "${{ github.sha }}"' -i deploy/charts/contract-analyzer/charts/${{ matrix.service }}/values.yaml
+
+      - name: Create auto-bump branch
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          # Create a new branch for the auto-bump
+          BRANCH_NAME="infra/auto-bump-${{ github.sha }}-${{ matrix.service }}"
+          git checkout -b $BRANCH_NAME
+          
+          # Commit the changes
+          git add deploy/charts/contract-analyzer/charts/${{ matrix.service }}/values.yaml
+          git commit -m "chore(${{ matrix.service }}): bump image tag to ${{ github.sha }}"
+          
+          # Push the branch
+          git push origin $BRANCH_NAME
+
+      - name: Create Pull Request for ArgoCD
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: infra/auto-bump-${{ github.sha }}-${{ matrix.service }}
+          title: "chore(${{ matrix.service }}): bump image tag to ${{ github.sha }}"
+          body: |
+            ## Auto-generated Helm Chart Update
+            
+            This PR updates the Docker image tag for the `${{ matrix.service }}` service to `${{ github.sha }}`.
+            
+            **Changes:**
+            - Updated `deploy/charts/contract-analyzer/charts/${{ matrix.service }}/values.yaml`
+            - New image tag: `${{ github.sha }}`
+            
+            This PR will be automatically picked up by ArgoCD for deployment.
+            
+            **Service:** ${{ matrix.service }}
+            **Commit:** ${{ github.sha }}
+            **Branch:** ${{ github.ref_name }}
+          labels: |
+            auto-deployment
+            ${{ matrix.service }}
+            helm-update
+
+  # PR Status Check Summary
+  pr-status-check:
+    name: PR Status Check
+    runs-on: ubuntu-latest
+    needs: [build-matrix, security-scan]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: PR Status Summary
+        run: |
+          echo "✅ All required checks passed:"
+          echo "  - Lint: Passed for all services"
+          echo "  - Test: Passed with ${{ env.COVERAGE_THRESHOLD }}% coverage threshold"
+          echo "  - Security: Snyk scan completed"
+          echo ""
+          echo "PR is ready for review and merge to main branch."
+
+  # Deployment status notification
+  deployment-status:
+    name: Deployment Status
+    runs-on: ubuntu-latest
+    needs: helm-deploy
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Deployment Summary
+        run: |
+          if [ "${{ needs.helm-deploy.result }}" == "success" ]; then
+            echo "🚀 Deployment automation completed successfully"
+            echo "  - Docker images built and pushed to GHCR"
+            echo "  - Helm charts updated with new image tags"
+            echo "  - Auto-bump PRs created for ArgoCD pickup"
+            echo ""
+            echo "ArgoCD will automatically sync the changes."
+          else
+            echo "❌ Deployment automation failed"
+            echo "Please check the helm-deploy job logs for details."
+          fi

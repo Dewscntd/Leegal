@@ -1,0 +1,80 @@
+# ArgoCD Repository Configuration with Webhook
+apiVersion: v1
+kind: Secret
+metadata:
+  name: contract-analyzer-repo
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+type: Opaque
+stringData:
+  type: git
+  url: https://github.com/Dewscntd/Leegal.git
+  # For private repositories, add credentials
+  # username: your-username
+  # password: your-personal-access-token
+
+---
+# ArgoCD Application with enhanced monitoring
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: contract-analyzer-auto-sync
+  namespace: argocd
+  annotations:
+    # Monitor specific branch patterns
+    argocd.argoproj.io/tracking-id: "contract-analyzer:infra/auto-bump-*"
+    # Refresh interval for checking changes
+    argocd.argoproj.io/refresh: "30s"
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/Dewscntd/Leegal.git
+    # Monitor all auto-bump branches
+    targetRevision: HEAD
+    path: deploy/charts/contract-analyzer
+    
+    # Helm configuration
+    helm:
+      valueFiles:
+        - values.yaml
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: contract-analyzer
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    
+    syncOptions:
+      - CreateNamespace=true
+      - Prune=true
+      - ApplyOutOfSyncOnly=true
+    
+    # Fast refresh for auto-bump branches
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 1m
+
+---
+# ConfigMap for ArgoCD to monitor auto-bump branches
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-repo-server-config
+  namespace: argocd
+data:
+  # Configure repository refresh interval
+  repository.refresh.interval: "30s"
+  
+  # Enable webhook support
+  webhook.github.secret: "your-webhook-secret"
+  
+  # Configure branch monitoring
+  application.instanceLabelKey: "argocd.argoproj.io/instance"

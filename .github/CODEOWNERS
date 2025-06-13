@@ -1,0 +1,39 @@
+# CODEOWNERS file for ContractAnalyzer project
+# This file defines who is responsible for code review in different parts of the repository
+
+# Global owners - require review for all changes
+* @Dewscntd
+
+# Infrastructure and DevOps
+/.github/ @Dewscntd
+/deploy/ @Dewscntd
+/docker-compose.yml @Dewscntd
+/Dockerfile* @Dewscntd
+/Makefile @Dewscntd
+/scripts/ @Dewscntd
+
+# Microservices - require review from service owners
+/contract-analyzer/apps/api-gateway/ @Dewscntd
+/contract-analyzer/apps/auth/ @Dewscntd
+/contract-analyzer/apps/analysis/ @Dewscntd
+/contract-analyzer/apps/citation/ @Dewscntd
+/contract-analyzer/apps/ocr-wrapper/ @Dewscntd
+
+# Shared libraries and configuration
+/contract-analyzer/libs/ @Dewscntd
+/contract-analyzer/packages/ @Dewscntd
+/contract-analyzer/nx.json @Dewscntd
+/contract-analyzer/package.json @Dewscntd
+/contract-analyzer/tsconfig*.json @Dewscntd
+
+# Helm charts - require DevOps review
+/deploy/charts/ @Dewscntd
+
+# Documentation
+*.md @Dewscntd
+/docs/ @Dewscntd
+
+# Configuration files
+*.yml @Dewscntd
+*.yaml @Dewscntd
+*.json @Dewscntd

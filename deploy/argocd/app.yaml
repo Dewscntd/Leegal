@@ -1,0 +1,63 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: contract-analyzer
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: contract-analyzer
+    app.kubernetes.io/part-of: contract-analyzer
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  
+  source:
+    repoURL: https://github.com/Dewscntd/Legalli.git
+    targetRevision: main
+    path: deploy/charts/contract-analyzer
+    helm:
+      valueFiles:
+        - values.yaml
+      parameters:
+        - name: global.environment
+          value: development
+        - name: global.imageRegistry
+          value: ""
+  
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: contract-analyzer
+  
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  revisionHistoryLimit: 10
+  
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+      jsonPointers:
+        - /spec/minReplicas
+        - /spec/maxReplicas
+    - group: keda.sh
+      kind: ScaledObject
+      jsonPointers:
+        - /spec/minReplicaCount
+        - /spec/maxReplicaCount

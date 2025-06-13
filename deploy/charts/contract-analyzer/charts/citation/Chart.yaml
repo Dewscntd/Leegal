@@ -1,0 +1,16 @@
+apiVersion: v2
+name: citation
+description: ContractAnalyzer citation service Helm chart
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - citation
+  - microservice
+  - contract-analyzer
+home: https://github.com/your-org/contract-analyzer
+sources:
+  - https://github.com/your-org/contract-analyzer
+maintainers:
+  - name: ContractAnalyzer Team
+    email: team@contract-analyzer.com

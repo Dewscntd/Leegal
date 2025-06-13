@@ -1,0 +1,40 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./apps-e2e"
+    },
+    {
+      "path": "./apps"
+    },
+    {
+      "path": "./apps/auth-e2e"
+    },
+    {
+      "path": "./apps/auth"
+    },
+    {
+      "path": "./apps/analysis-e2e"
+    },
+    {
+      "path": "./apps/analysis"
+    },
+    {
+      "path": "./apps/citation-e2e"
+    },
+    {
+      "path": "./apps/citation"
+    },
+    {
+      "path": "./apps/ocr-wrapper-e2e"
+    },
+    {
+      "path": "./apps/ocr-wrapper"
+    },
+    {
+      "path": "./libs/common"
+    }
+  ]
+}

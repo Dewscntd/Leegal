@@ -1,0 +1,66 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ContractAnalyzer microservices
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'analysis-service'
+    static_configs:
+      - targets: ['analysis:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'citation-service'
+    static_configs:
+      - targets: ['citation:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  - job_name: 'ocr-wrapper-service'
+    static_configs:
+      - targets: ['ocr-wrapper:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Infrastructure services
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    scrape_interval: 60s
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 60s
+
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+    scrape_interval: 60s
+
+  - job_name: 'qdrant'
+    static_configs:
+      - targets: ['qdrant:6333']
+    metrics_path: '/metrics'
+    scrape_interval: 60s

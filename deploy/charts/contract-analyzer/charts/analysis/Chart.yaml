@@ -1,0 +1,16 @@
+apiVersion: v2
+name: analysis
+description: ContractAnalyzer analysis service Helm chart
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - analysis
+  - microservice
+  - contract-analyzer
+home: https://github.com/your-org/contract-analyzer
+sources:
+  - https://github.com/your-org/contract-analyzer
+maintainers:
+  - name: ContractAnalyzer Team
+    email: team@contract-analyzer.com
