@@ -12,7 +12,7 @@ spec:
   project: default
   
   source:
-    repoURL: https://github.com/Dewscntd/Legalli.git
+    repoURL: https://github.com/Dewscntd/Leegal.git
     targetRevision: main
     path: deploy/charts/contract-analyzer
     helm:

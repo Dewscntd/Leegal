@@ -15,8 +15,8 @@ COPY contract-analyzer/tsconfig*.json ./contract-analyzer/
 COPY contract-analyzer/apps/package.json ./contract-analyzer/apps/
 COPY contract-analyzer/apps/*/package.json ./contract-analyzer/apps/*/
 
-# Install dependencies with frozen lockfile
-RUN cd contract-analyzer && npm ci
+# Install dependencies (temporarily using npm install instead of npm ci)
+RUN cd contract-analyzer && npm install
 
 # Copy source code
 COPY contract-analyzer/ ./contract-analyzer/
@@ -34,7 +34,7 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 WORKDIR /app
 
 # Copy built application from builder stage
-COPY --from=builder /app/contract-analyzer/dist/apps/api-gateway ./
+COPY --from=builder /app/contract-analyzer/apps/dist ./
 COPY --from=builder /app/contract-analyzer/node_modules ./node_modules
 
 # Copy package.json for runtime
