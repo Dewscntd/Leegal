@@ -11,9 +11,8 @@ COPY contract-analyzer/package*.json ./contract-analyzer/
 COPY contract-analyzer/nx.json ./contract-analyzer/
 COPY contract-analyzer/tsconfig*.json ./contract-analyzer/
 
-# Copy workspace configuration
-COPY contract-analyzer/apps/package.json ./contract-analyzer/apps/
-COPY contract-analyzer/apps/*/package.json ./contract-analyzer/apps/*/
+# Copy project configuration files
+COPY contract-analyzer/apps/*/project.json ./contract-analyzer/apps/*/
 
 # Install dependencies with frozen lockfile
 RUN cd contract-analyzer && npm ci
@@ -38,7 +37,7 @@ COPY --from=builder /app/contract-analyzer/apps/dist ./
 COPY --from=builder /app/contract-analyzer/node_modules ./node_modules
 
 # Copy package.json for runtime
-COPY --from=builder /app/contract-analyzer/apps/package.json ./package.json
+COPY --from=builder /app/contract-analyzer/package.json ./package.json
 
 # Install only production dependencies
 RUN npm prune --production
