@@ -15,8 +15,8 @@ COPY contract-analyzer/tsconfig*.json ./contract-analyzer/
 COPY contract-analyzer/apps/package.json ./contract-analyzer/apps/
 COPY contract-analyzer/apps/*/package.json ./contract-analyzer/apps/*/
 
-# Install dependencies (temporarily using npm install instead of npm ci)
-RUN cd contract-analyzer && npm install
+# Install dependencies with frozen lockfile
+RUN cd contract-analyzer && npm ci
 
 # Copy source code
 COPY contract-analyzer/ ./contract-analyzer/
