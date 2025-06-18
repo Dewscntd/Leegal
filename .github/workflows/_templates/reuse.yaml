@@ -36,22 +36,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
-          cache: 'pnpm'
-          cache-dependency-path: 'contract-analyzer/pnpm-lock.yaml'
+          cache: 'npm'
+          cache-dependency-path: 'contract-analyzer/package-lock.json'
 
       - name: Install dependencies
         run: |
           cd contract-analyzer
-          pnpm install --frozen-lockfile
+          npm ci
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -69,28 +64,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
-          cache: 'pnpm'
-          cache-dependency-path: 'contract-analyzer/pnpm-lock.yaml'
+          cache: 'npm'
+          cache-dependency-path: 'contract-analyzer/package-lock.json'
 
-      - name: Restore node_modules cache
-        uses: actions/cache@v4
-        with:
-          path: contract-analyzer/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('contract-analyzer/pnpm-lock.yaml') }}
+      - name: Install dependencies
+        run: |
+          cd contract-analyzer
+          npm ci
 
       - name: Run lint
         run: |
           cd contract-analyzer
-          pnpm nx lint ${{ inputs.service }}
+          npx nx lint ${{ inputs.service }}
 
   test:
     name: Test
@@ -100,28 +89,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
-          cache: 'pnpm'
-          cache-dependency-path: 'contract-analyzer/pnpm-lock.yaml'
+          cache: 'npm'
+          cache-dependency-path: 'contract-analyzer/package-lock.json'
 
-      - name: Restore node_modules cache
-        uses: actions/cache@v4
-        with:
-          path: contract-analyzer/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('contract-analyzer/pnpm-lock.yaml') }}
+      - name: Install dependencies
+        run: |
+          cd contract-analyzer
+          npm ci
 
       - name: Run tests with coverage
         run: |
           cd contract-analyzer
-          pnpm nx test ${{ inputs.service }} --coverage --coverageThreshold='{"global":{"branches":${{ inputs.coverage-threshold }},"functions":${{ inputs.coverage-threshold }},"lines":${{ inputs.coverage-threshold }},"statements":${{ inputs.coverage-threshold }}}}'
+          npx nx test ${{ inputs.service }} --coverage --coverageThreshold='{"global":{"branches":${{ inputs.coverage-threshold }},"functions":${{ inputs.coverage-threshold }},"lines":${{ inputs.coverage-threshold }},"statements":${{ inputs.coverage-threshold }}}}'
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
@@ -139,23 +122,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node-version }}
-          cache: 'pnpm'
-          cache-dependency-path: 'contract-analyzer/pnpm-lock.yaml'
+          cache: 'npm'
+          cache-dependency-path: 'contract-analyzer/package-lock.json'
 
-      - name: Restore node_modules cache
-        uses: actions/cache@v4
-        with:
-          path: contract-analyzer/node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('contract-analyzer/pnpm-lock.yaml') }}
+      - name: Install dependencies
+        run: |
+          cd contract-analyzer
+          npm ci
 
       - name: Run Snyk to check for Node.js vulnerabilities
         uses: snyk/actions/node@master
