@@ -18,4 +18,14 @@ export default {
   },
   moduleFileExtensions: ['ts', 'js', 'html'],
   coverageDirectory: 'test-output/jest/coverage',
+  testPathIgnorePatterns: [
+    '<rootDir>/.*-e2e/.*',
+    '<rootDir>/auth/.*',
+    '<rootDir>/analysis/.*',
+    '<rootDir>/citation/.*',
+    '<rootDir>/ocr-wrapper/.*'
+  ],
+  testMatch: [
+    '<rootDir>/src/**/*.(spec|test).[jt]s?(x)'
+  ]
 };
