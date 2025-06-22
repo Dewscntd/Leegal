@@ -8,7 +8,7 @@ set -e
 # Configuration
 CLUSTER_NAME="ca-dev"
 ARGOCD_VERSION="v2.11.0"
-NGINX_VERSION="v1.10.0"
+NGINX_VERSION="4.12.3"
 KEDA_VERSION="v2.12.0"
 
 # Colors for output

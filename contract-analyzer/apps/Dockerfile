@@ -7,14 +7,12 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package files for dependency installation
-COPY package*.json ./
 COPY contract-analyzer/package*.json ./contract-analyzer/
 COPY contract-analyzer/nx.json ./contract-analyzer/
 COPY contract-analyzer/tsconfig*.json ./contract-analyzer/
 
-# Copy workspace configuration
-COPY contract-analyzer/apps/package.json ./contract-analyzer/apps/
-COPY contract-analyzer/apps/*/package.json ./contract-analyzer/apps/*/
+# Copy project configuration files
+COPY contract-analyzer/apps/*/project.json ./contract-analyzer/apps/*/
 
 # Install dependencies with frozen lockfile
 RUN cd contract-analyzer && npm ci
@@ -35,11 +33,11 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 WORKDIR /app
 
 # Copy built application from builder stage
-COPY --from=builder /app/contract-analyzer/dist/apps/api-gateway ./
+COPY --from=builder /app/contract-analyzer/apps/dist ./
 COPY --from=builder /app/contract-analyzer/node_modules ./node_modules
 
 # Copy package.json for runtime
-COPY --from=builder /app/contract-analyzer/apps/package.json ./package.json
+COPY --from=builder /app/contract-analyzer/package.json ./package.json
 
 # Install only production dependencies
 RUN npm prune --production

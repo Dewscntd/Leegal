@@ -29,14 +29,14 @@ main:
   # Enforce restrictions for administrators
   enforce_admins: true
 
-  # Require pull request reviews before merging
+  # Require pull request reviews before merging (OPTIONAL)
   required_pull_request_reviews:
-    # Number of required approving reviews
-    required_approving_review_count: 1
+    # Number of required approving reviews (0 = optional)
+    required_approving_review_count: 0
     # Dismiss stale reviews when new commits are pushed
     dismiss_stale_reviews: true
-    # Require review from code owners
-    require_code_owner_reviews: true
+    # Require review from code owners (disabled for solo development)
+    require_code_owner_reviews: false
     # Restrict who can dismiss reviews
     dismissal_restrictions:
       users: []
@@ -64,7 +64,7 @@ main:
 #   --method PUT \
 #   --field required_status_checks='{"strict":true,"contexts":["Build Matrix (api-gateway)","Build Matrix (auth)","Build Matrix (analysis)","Build Matrix (citation)","Build Matrix (ocr-wrapper)","Security Scan (api-gateway)","Security Scan (auth)","Security Scan (analysis)","Security Scan (citation)","Security Scan (ocr-wrapper)","PR Status Check"]}' \
 #   --field enforce_admins=true \
-#   --field required_pull_request_reviews='{"required_approving_review_count":1,"dismiss_stale_reviews":true,"require_code_owner_reviews":true}' \
+#   --field required_pull_request_reviews='{"required_approving_review_count":0,"dismiss_stale_reviews":true,"require_code_owner_reviews":false}' \
 #   --field restrictions=null \
 #   --field allow_force_pushes=false \
 #   --field allow_deletions=false
